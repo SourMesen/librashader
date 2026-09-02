@@ -35,6 +35,7 @@ pub struct ShaderSource {
 
     /// The list of shader parameters found in the shader source.
     pub parameters: FastHashMap<ShortString, ShaderParameter>,
+    pub ordered_parameters: Vec<ShaderParameter>,
 
     /// The image format the shader expects.
     pub format: ImageFormat,
@@ -92,13 +93,14 @@ pub(crate) fn load_shader_source(
     let meta = pragma::parse_pragma_meta(&source)?;
 
     let text = stage::process_stages(&source)?;
-    let parameters = FastHashMap::from_iter(meta.parameters.into_iter().map(|p| (p.id.clone(), p)));
+    let parameters = FastHashMap::from_iter(meta.parameters.clone().into_iter().map(|p| (p.id.clone(), p)));
 
     Ok(ShaderSource {
         vertex: text.vertex,
         fragment: text.fragment,
         name: meta.name,
         parameters,
+        ordered_parameters: meta.parameters,
         format: meta.format,
     })
 }

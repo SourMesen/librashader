@@ -74,21 +74,30 @@ pub mod presets {
 
     /// Get full parameter metadata from a shader preset.
     pub fn get_parameter_meta(
-        preset: &ShaderPreset,
+       preset: &ShaderPreset,
     ) -> Result<impl Iterator<Item = ShaderParameter>, PreprocessError> {
-        let mut map: FastHashMap<ShortString, ShaderParameter> = FastHashMap::default();
+        let mut params: Vec<ShaderParameter> = Vec::new();
+        let mut index_map: FastHashMap<ShortString, usize> = FastHashMap::default();
+
         for pass in &preset.passes {
             let source = ShaderSource::load(&pass.path, preset.features)?;
-            for (key, value) in source.parameters {
-                map.insert(key, value);
+            for parameter in source.ordered_parameters {
+                if let Some(&idx) = index_map.get(&parameter.id) {
+                    params[idx] = parameter;
+                } else {
+                    index_map.insert(parameter.id.clone(), params.len());
+                    params.push(parameter);
+                }
             }
         }
+
         for parameter in &preset.parameters {
-            if let Some(meta) = map.get_mut(&parameter.name) {
-                meta.initial = parameter.value;
+            if let Some(&idx) = index_map.get(&parameter.name) {
+                params[idx].initial = parameter.value;
             }
         }
-        Ok(map.into_iter().map(|(_, v)| v))
+
+        Ok(params.into_iter())
     }
 
     #[cfg(test)]
