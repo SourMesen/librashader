@@ -43,6 +43,9 @@ pub fn main() -> ExitCode {
 
     cmd.arg("build");
     cmd.args(["--package", "librashader-capi"]);
+    cmd.arg("--no-default-features");
+    cmd.arg("--features");
+    cmd.arg("runtime-opengl,runtime-d3d11,runtime-metal");
     cmd.arg(format!(
         "--profile={}",
         if profile == "debug" { "dev" } else { &profile }
