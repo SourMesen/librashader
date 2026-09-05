@@ -17,12 +17,16 @@ jobs:
         include:
           - os: ubuntu-latest
             output: x64-ubuntu
+            features: runtime-opengl
           - os: windows-latest
             output: x64-windows
+            features: runtime-d3d11
           - os: macos-15-intel
             output: x64-macos
+            features: runtime-metal
           - os: macos-15
             output: arm-macos
+            features: runtime-metal
       fail-fast: false
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.output }}
@@ -32,7 +36,7 @@ jobs:
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Build dynamic library
-        run: cargo run -p librashader-build-script -- --profile ${{ matrix.profile }}
+        run: cargo run -p librashader-build-script -- --profile ${{ matrix.profile }} -- --no-default-features --features ${{ matrix.features }}
       - name: Stage C header for upload
         shell: bash
         run: cp include/librashader.h target/${{ matrix.profile }}/librashader.h
@@ -65,7 +69,7 @@ jobs:
           sudo apt-get update || true
           sudo apt-get -y install g++-aarch64-linux-gnu gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu xorg-dev libx11-dev:arm64 libxrandr-dev:arm64
       - name: Build dynamic library
-        run: CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/aarch64-linux-gnu-gcc cargo run -p librashader-build-script -- --profile ${{ matrix.profile }} --target aarch64-unknown-linux-gnu
+        run: CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=/usr/bin/aarch64-linux-gnu-gcc cargo run -p librashader-build-script -- --profile ${{ matrix.profile }} --target aarch64-unknown-linux-gnu -- --no-default-features --features runtime-opengl
       - name: Stage C header for upload
         run: cp include/librashader.h target/aarch64-unknown-linux-gnu/${{ matrix.profile }}/librashader.h
       - name: Upload build artifacts
@@ -73,30 +77,3 @@ jobs:
         with:
           name: 'librashader-arm-ubuntu'
           path: ${{ format('target/aarch64-unknown-linux-gnu/{0}/librashader.*', matrix.profile) }}
-  build-windows-7:
-    strategy:
-      matrix:
-        profile: ["optimized"]
-      fail-fast: false
-    runs-on: windows-latest
-    name: x64-win7
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      # Tier 3 target; -Zbuild-std requires nightly. The build itself stays on the
-      # stable code path because we do not pass --nightly to the build script.
-      - name: Install nightly Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
-          components: rust-src
-      - name: Build dynamic library
-        run: cargo run -p librashader-build-script -- --profile ${{ matrix.profile }} --target x86_64-win7-windows-msvc -- -Zbuild-std
-      - name: Stage C header for upload
-        shell: bash
-        run: cp include/librashader.h target/x86_64-win7-windows-msvc/${{ matrix.profile }}/librashader.h
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: 'librashader-x64-win7'
-          path: ${{ format('target/x86_64-win7-windows-msvc/{0}/librashader.*', matrix.profile) }}
